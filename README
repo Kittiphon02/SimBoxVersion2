@@ -1,0 +1,227 @@
+# SIM Management System - SIM Recovery Removal
+
+## การเปลี่ยนแปลงที่ทำ
+
+### ✅ สิ่งที่ถูกลบออก
+
+#### 1. ในไฟล์ `main.py`:
+- **ฟังก์ชัน SIM Recovery ทั้งหมด**:
+  - `on_sim_failure_detected()` และ variants
+  - `on_sim_recovery_success()`
+  - `on_sim_recovery_failed()`
+  - `manual_sim_recovery()` และ variants
+  - `start_automatic_recovery()`
+  - `auto_refresh_after_recovery()`
+  - `retry_refresh_after_recovery()`
+  - `finalize_manual_recovery()`
+  - Recovery timeout handlers
+  - SIM failure detection และ handling
+
+- **ปุ่ม SIM Recovery**:
+  - `add_sim_recovery_button()`
+  - `create_enhanced_recovery_button()`
+  - Recovery controls และ UI elements
+
+- **คำสั่ง AT Recovery**:
+  - `AT+RECOVERY`
+  - `AT+SIMSTATUS`
+  - `AT+CFUNRESET`
+  - Recovery-related AT commands
+
+- **ตัวแปร Recovery**:
+  - `sim_recovery_in_progress`
+  - `recovery_attempts`
+  - `recovery_success_count`
+  - Recovery statistics และ tracking
+
+#### 2. ในไฟล์ `serial_service.py`:
+- **SIM Recovery Signals**:
+  - `sim_failure_detected`
+  - `sim_recovery_success`
+  - `sim_recovery_failed`
+  - `cfun_reset_needed`
+  - `sim_not_available_signal`
+
+- **Recovery Logic**:
+  - Recovery timeout handlers
+  - CFUN reset sequences
+  - SIM failure counting
+  - Automatic recovery mechanisms
+  - Recovery state management
+
+- **CPIN Polling**:
+  - Automatic CPIN status checking
+  - Recovery-related CPIN handling
+
+#### 3. UI Elements ที่ลบ:
+- ปุ่ม "SIM Recovery" จาก modem controls
+- Recovery status indicators
+- Recovery progress displays
+- Recovery-related notifications
+
+### ✅ สิ่งที่ยังคงอยู่
+
+#### 1. ฟังก์ชันหลัก:
+- การส่งและรับ SMS
+- การแสดงข้อมูล SIM
+- AT Command interface
+- SMS monitoring และ logging
+- Network sync capabilities
+- Signal strength display
+
+#### 2. AT Commands ที่ยังใช้ได้:
+```
+AT+RUN      - เริ่ม SMS Monitor
+AT+STOP     - หยุด SMS Monitor  
+AT+CLEAR    - เคลียร์ SMS Monitor
+AT+TEST     - ทดสอบระบบ SMS
+AT+LOGSAVE  - ทดสอบการบันทึก
+AT+LOGCHECK - ตรวจสอบ log files
+AT+DEBUG    - Debug SMS processing
+AT+VERIFY   - ตรวจสอบระบบ
+AT+STATS    - แสดงสถิติ SMS
+AT+SMSTEST  - ทดสอบ SMS signals
+```
+
+#### 3. SMS Monitoring:
+- Real-time SMS monitoring
+- SMS signal processing
+- UCS2 decoding
+- Emergency backup saving
+- Manual SMS saving
+
+#### 4. Logging System:
+- SMS inbox logging
+- SMS sent logging  
+- Network share support
+- Backup mechanisms
+- CSV export functionality
+
+## การใช้งานหลังจากลบ SIM Recovery
+
+### 1. เมื่อเจอปัญหา SIM:
+- ใช้ปุ่ม "Refresh Ports" เพื่อรีเฟรชการเชื่อมต่อ
+- ตรวจสอบการเชื่อมต่อ USB และ SIM card
+- รีสตาร์ทโปรแกรมถ้าจำเป็น
+- ตรวจสอบ SIM card ว่าใส่ถูกต้องหรือไม่
+
+### 2. การตรวจสอบสถานะ:
+- ดูข้อมูลในตาราง SIM 
+- ตรวจสอบ Signal strength
+- ใช้คำสั่ง `AT+VERIFY` เพื่อตรวจสอบระบบ
+- ใช้คำสั่ง `AT+DEBUG` สำหรับ troubleshooting
+
+### 3. การแก้ไขปัญหา:
+- หยุดและเริ่ม SMS Monitor ใหม่
+- ตรวจสอบ AT command responses
+- ลองเปลี่ยน USB port
+- ตรวจสอบ baudrate settings
+
+## ข้อดีของการลบ SIM Recovery
+
+### 1. ความเสถียร:
+- ลดความซับซ้อนของโค้ด
+- ลดโอกาสเกิด infinite loops
+- ไม่มีการ reset modem บ่อยๆ
+- ลด interference กับการทำงานปกติ
+
+### 2. ประสิทธิภาพ:
+- โปรแกรมทำงานเร็วขึ้น
+- ใช้ memory น้อยลง
+- ลด CPU usage
+- Response time ดีขึ้น
+
+### 3. ความชัดเจน:
+- Code ง่ายต่อการ maintain
+- ลด debugging complexity
+- Error messages ชัดเจนขึ้น
+- User experience ที่คาดเดาได้
+
+## การทำงานของระบบหลังการลบ
+
+### 1. SMS Processing:
+```
+รับ SMS → Decode UCS2 → Process Signal → Save to Log → Show Notification
+```
+
+### 2. Signal Flow:
+```
+Serial Port → SerialMonitorThread → SMS Signal → Main Window → Display
+```
+
+### 3. Error Handling:
+```
+Error → Display Message → Manual Action Required
+```
+
+## คำแนะนำการใช้งาน
+
+### 1. เมื่อเริ่มใช้งาน:
+1. เลือก USB Port ที่ถูกต้อง
+2. ตั้งค่า Baudrate (ปกติ 115200)
+3. กดปุ่ม "Refresh Ports" 
+4. ตรวจสอบข้อมูล SIM ในตาราง
+5. เปิด "SMS Monitor" ถ้าต้องการรับ SMS
+
+### 2. เมื่อเจอปัญหา:
+1. ตรวจสอบ Response area สำหรับ error messages
+2. ลองใช้คำสั่ง `AT+TEST` เพื่อทดสอบระบบ
+3. กดปุ่ม "Refresh Ports" อีกครั้ง
+4. ตรวจสอบการเชื่อมต่อฮาร์ดแวร์
+
+### 3. การ Monitoring SMS:
+1. กดปุ่ม "SMS Monitor" เพื่อเปิดหน้าต่าง monitoring
+2. กดปุ่ม "Start Monitoring" ในหน้าต่าง monitor
+3. SMS ที่เข้ามาจะแสดงใน monitor และบันทึกใน log
+4. ใช้ปุ่ม "ดูประวัติ SMS" เพื่อดู SMS ที่ผ่านมา
+
+### 4. การส่ง SMS:
+1. ใส่เบอร์โทรในช่อง "Telephone number"
+2. พิมพ์ข้อความในช่อง "SMS messages"
+3. กดปุ่ม "Send SMS"
+4. รอให้ Loading dialog แสดงความคืบหน้า
+
+## Files ที่ได้รับการแก้ไข
+
+### 1. `main.py`:
+- ลบ SIM Recovery functions ทั้งหมด
+- ลบ Recovery UI elements
+- ลบ Recovery AT commands
+- เก็บเฉพาะ core functionality
+
+### 2. `serial_service.py`:
+- ลบ Recovery signals และ logic
+- ลบ CPIN polling system
+- ลบ automatic recovery mechanisms
+- เก็บเฉพาะ SMS processing
+
+### 3. ไฟล์อื่นๆ ที่ไม่เปลี่ยน:
+- `loading_widget.py` - ยังใช้งานได้ปกติ
+- `sim_model.py` - ไม่มีการเปลี่ยนแปลง
+- `sim_table_widget.py` - ยังแสดง SIM data ได้
+- `sms_log.py` - ระบบ logging ยังคงทำงาน
+- `sms_log_dialog.py` - ดูประวัติ SMS ได้
+- `sms_realtime_monitor.py` - Monitor SMS ได้
+- `styles/` - สไตล์ไม่เปลี่ยน
+
+## สรุป
+
+การลบส่วน SIM Recovery ออกจากโปรแกรมทำให้:
+
+✅ **ข้อดี:**
+- โปรแกรมเสถียรขึ้น
+- ใช้งานง่ายขึ้น  
+- Code สะอาดขึ้น
+- ลด complexity
+
+❌ **ข้อเสีย:**
+- ไม่มี automatic recovery เมื่อ SIM มีปัญหา
+- ต้อง manual intervention มากขึ้น
+
+🔧 **แนวทางแก้ไข:**
+- ใช้ "Refresh Ports" แทน auto recovery
+- Monitor error messages ใน Response area  
+- ตรวจสอบฮาร์ดแวร์เมื่อมีปัญหา
+- รีสตาร์ทโปรแกรมถ้าจำเป็น
+
+โปรแกรมยังคงสามารถส่ง/รับ SMS, แสดงข้อมูล SIM, และทำงานหลักๆ ได้ครบถ้วนโดยไม่มี SIM Recovery ที่อาจทำให้เกิดปัญหา

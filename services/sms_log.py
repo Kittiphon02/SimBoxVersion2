@@ -71,13 +71,7 @@ def get_log_file_path(filename: str):
     log_dir = get_log_directory()
     return os.path.join(log_dir, filename)
 
-def append_sms_log(
-    filename: str,
-    phone: str,
-    message: str,
-    status: str,
-    tz_offset: str = "+07"
-) -> bool:
+def append_sms_log(filename: str,phone: str,message: str,status: str,tz_offset: str = "+07") -> bool:
     """
     เขียนบรรทัดใหม่แบบ CSV:
     "YY/MM/DD,HH:MM:SS+TZ",phone,message,status
@@ -85,7 +79,7 @@ def append_sms_log(
     from datetime import datetime
     # เตรียม timestamp ในโซน +07
     now = datetime.now()
-    ts = now.strftime(f"%y/%m/%d,%H:%M:%S{tz_offset}")
+    ts = now.strftime(f"%d/%m/%Y,%H:%M:%S")
     line = f'"{ts}",{phone},{message},{status}'
 
     # หา path และสร้างโฟลเดอร์ถ้ายังไม่มี
@@ -102,12 +96,7 @@ def append_sms_log(
         print(f"❌ append_sms_log failed: {e}")
         return False
 
-def log_sms_sent(
-    phone: str,
-    message: str,
-    status: str = "ส่งสำเร็จ",
-    log_file: str = None
-):
+def log_sms_sent(phone: str,message: str,status: str = "ส่งสำเร็จ",log_file: str = None):
     """บันทึก SMS ที่ส่งออกไป - Enhanced with Network Support"""
     if log_file is None:
         log_file = get_log_file_path("sms_sent_log.csv")
@@ -117,13 +106,22 @@ def log_sms_sent(
     is_new = not os.path.isfile(log_file) or os.path.getsize(log_file) == 0
 
     try:
-        with open(log_file, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
+        with open(local_backup, "a", newline="", encoding="utf-8") as f:
+            writer_local = csv.writer(f)        # <-- แก้ตรงนี้
             if is_new:
                 writer.writerow(["Datetime", "Phone", "Message", "Status"])
             writer.writerow([now, phone, message, status])
-        
-        print(f"📤 SMS sent log saved to: {log_file}")
+        print(f"📤 SMS sent log saved to network: {log_file}")
+
+        local_backup = os.path.join(".", "log", "sms_sent_log.csv")
+        ensure_dir_for_file(local_backup)
+        is_new_local = not os.path.isfile(local_backup) or os.path.getsize(local_backup) == 0
+        with open(local_backup, "a", newline="", encoding="utf-8") as f:
+            writer_local = csv.writer(lf)
+            if is_new_local:
+                writer_local.writerow(["Datetime", "Phone", "Message", "Status"])
+            writer_local.writerow([now, phone, message, status])
+        print(f"📤 SMS sent log saved to local backup: {local_backup}")
         return True
         
     except Exception as e:
@@ -147,12 +145,7 @@ def log_sms_sent(
             print(f"❌ Failed to save to local backup: {backup_error}")
             return False
 
-def log_sms_inbox(
-    sender: str,
-    message: str,
-    status: str = "รับเข้า",
-    log_file: str = None
-):
+def log_sms_inbox(sender: str,message: str,status: str = "รับเข้า",log_file: str = None):
     """บันทึก SMS ที่รับเข้า - Enhanced with Network Support"""
     if log_file is None:
         log_file = get_log_file_path("sms_inbox_log.csv")
@@ -162,13 +155,28 @@ def log_sms_inbox(
     is_new = not os.path.isfile(log_file) or os.path.getsize(log_file) == 0
 
     try:
+        # ——— เขียนลง network share ———
         with open(log_file, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             if is_new:
-                writer.writerow(["Datetime", "Sender", "Message", "Status"])
-            writer.writerow([now, sender, message, status])
-        
-        print(f"📥 SMS inbox log saved to: {log_file}")
+                # ใช้ header เดียวกับ SMS sent
+                writer.writerow(["Datetime", "Phone", "Message", "Status"])
+            # normalize เบอร์แบบเดียวกับ log_sms_sent
+            phone = sender.replace("+66", "0").lstrip("+").replace("-", "").replace(" ", "")
+            writer.writerow([now, phone, message, status])
+
+        print(f"📥 SMS inbox log saved to network: {log_file}")
+
+        local_backup = os.path.join(".", "log", "sms_inbox_log.csv")
+        ensure_dir_for_file(local_backup)
+        is_new_local = not os.path.isfile(local_backup) or os.path.getsize(local_backup) == 0
+        # ——— เขียนซ้ำลง local backup (`./log/sms_inbox_log.csv`) ———
+        with open(local_backup, "a", newline="", encoding="utf-8") as lf:
+            writer_local = csv.writer(lf)
+            if is_new_local:
+                writer_local.writerow(["Datetime", "Phone", "Message", "Status"])
+            writer_local.writerow([now, phone, message, status])
+        print(f"📥 SMS inbox log also saved to local backup: {local_backup}")
         return True
         
     except Exception as e:

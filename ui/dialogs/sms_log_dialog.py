@@ -16,7 +16,7 @@ import portalocker
 def get_log_directory_from_settings():
     """ดึง log directory จาก settings.json"""
     try:
-        from sms_log import get_log_directory
+        from services.sms_log import get_log_directory
         return get_log_directory()
     except Exception as e:
         print(f"Error getting log directory: {e}")
@@ -276,7 +276,7 @@ class SmsLogDialog(QDialog):
         
         # ใช้ sms_log module เพื่อดึง path ที่ถูกต้อง
         try:
-            from sms_log import get_log_file_path
+            from services.sms_log import get_log_file_path
             filename = "sms_sent_log.csv" if idx != 1 else "sms_inbox_log.csv"
             log_path = get_log_file_path(filename)
             
@@ -317,31 +317,36 @@ class SmsLogDialog(QDialog):
                     if idx == 1:
                         # Inbox pad ให้ครบ 3 คอลัมน์
                         dt_str, phone, message = (row + ["", ""])[:3]
+                        phone = self.normalize_phone(phone) 
                         status = ""
                         # parse inbox date/time
                         dt_str = dt_str.strip('"')
 
-                        # parse inbox date/time ฟอร์แมต YY/MM/DD,HH:MM:SS+TZ
-                        if "," in dt_str:
+                        # 1) ถ้า CSV เก็บเป็น ISO "YYYY-MM-DD HH:MM:SS"
+                        m = re.match(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})$", dt_str)
+                        if m:
+                            dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                            date = dt.strftime("%d/%m/%Y")
+                            time = dt.strftime("%H:%M:%S")
+                            datetime_obj = dt
+                        # 2) ฟอร์แมตเก่าสไตล์ GSM CMT: "YY/MM/DD,HH:MM:SS+TZ"
+                        elif "," in dt_str:
                             dpart, tpart = dt_str.split(",", 1)
-                            if "+" in tpart:
-                                tpart = tpart.split("+", 1)[0]
-                            # แก้เป็น: yy2, mm, dd2 = map(int, dpart.split("/"))
-                            yy2, mm, dd2 = map(int, dpart.split("/"))
-                            yyyy = yy2 + 2000 if yy2 < 100 else yy2
-                            # สลับให้เป็น วัน/เดือน/ปี
-                            date = f"{dd2:02d}/{mm:02d}/{yyyy}"
+                            tpart = tpart.split("+",1)[0]  # ตัด +TZ ออก
+                            yy, mm, dd = map(int, dpart.split("/"))
+                            yyyy = yy + 2000 if yy < 100 else yy
+                            date = f"{dd:02d}/{mm:02d}/{yyyy}"
                             time = tpart.strip()
                             try:
-                                datetime_obj = datetime.strptime(f"{yyyy}-{mm:02d}-{dd:02d} {time}", 
-                                                                "%Y-%m-%d %H:%M:%S")
+                                datetime_obj = datetime.strptime(
+                                    f"{yyyy}-{mm:02d}-{dd:02d} {time}",
+                                    "%Y-%m-%d %H:%M:%S"
+                                )
                             except:
                                 datetime_obj = None
                         else:
-                            date = dt_str
-                            time = ""
-                            datetime_obj = None
-
+                            # fallback
+                            date, time, datetime_obj = dt_str, "", None
                     else:
                         # Send or Fail pad ให้ครบ 4 คอลัมน์
                         dt_str, phone, message, status = (row + ["", "", ""])[:4]

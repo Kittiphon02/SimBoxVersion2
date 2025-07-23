@@ -13,7 +13,8 @@ from styles import SimTableWidgetStyles
 class SimTableWidget(QTableWidget):
     def __init__(self, sims, history_callback=None, port_available=True):
         super().__init__(0, 5)
-        self.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile network", "Signal"])
+        # ใช้ header ตัวเลขแบบง่ายตามรูปที่ 2
+        self.setHorizontalHeaderLabels(["1", "2", "3", "4", "5"])
         self.history_callback = history_callback
         self.port_available = port_available
         
@@ -23,6 +24,10 @@ class SimTableWidget(QTableWidget):
         
         # ใช้สไตล์ใหม่
         self.apply_styles()
+        
+        # สร้างข้อมูลตัวอย่างถ้าไม่มี SIM
+        if not sims:
+            sims = self.create_sample_data()
         
         # **เพิ่มการ debug และตั้งค่าข้อมูล**
         self.set_data_with_debug(sims)
@@ -49,18 +54,29 @@ class SimTableWidget(QTableWidget):
         
         self.setStyleSheet(combined_style)
 
+    def create_sample_data(self):
+        """สร้างข้อมูลตัวอย่างสำหรับตาราง"""
+        from types import SimpleNamespace
+        
+        return [SimpleNamespace(
+            phone="-",
+            imsi="-", 
+            iccid="-",
+            carrier="Unknown",
+            signal="❌ Error"
+        )]
+
     def set_data_with_debug(self, sims):
         """ตั้งค่าข้อมูลในตารางพร้อม debug"""
         print(f"[TABLE DEBUG] set_data_with_debug called with {len(sims) if sims else 0} SIMs")
         
         try:
-            
             self.setRowCount(0)  # ลบแค่แถวข้อมูล
             self.clearContents()  # ลบเฉพาะเนื้อหา ไม่ลบ headers
             
             if not sims:
-                print("[TABLE DEBUG] No SIMs provided, table will be empty")
-                return
+                print("[TABLE DEBUG] No SIMs provided, using sample data")
+                sims = self.create_sample_data()
             
             print(f"[TABLE DEBUG] Setting table row count to {len(sims)}")
             self.setRowCount(len(sims))
@@ -73,75 +89,43 @@ class SimTableWidget(QTableWidget):
                 imsi = getattr(sim, 'imsi', '-')
                 iccid = getattr(sim, 'iccid', '-')
                 carrier = getattr(sim, 'carrier', 'Unknown')
-                signal = getattr(sim, 'signal', 'N/A')
+                signal = getattr(sim, 'signal', '❌ Error')
                 
                 print(f"[TABLE DEBUG] SIM {row_pos} data: phone='{phone}', imsi='{imsi}', iccid='{iccid}', carrier='{carrier}', signal='{signal}'")
                 
                 # **สร้าง items อย่างปลอดภัย**
                 try:
-                    # Phone
-                    phone_item = QTableWidgetItem(str(phone) if phone is not None else '-')
-                    phone_item.setTextAlignment(Qt.AlignCenter)
-                    self.setItem(row_pos, 0, phone_item)
-                    print(f"[TABLE DEBUG] Set phone item: '{phone_item.text()}'")
+                    # Column 1: Phone/Data
+                    col1_item = QTableWidgetItem(str(phone) if phone is not None else '-')
+                    col1_item.setTextAlignment(Qt.AlignCenter)
+                    self.setItem(row_pos, 0, col1_item)
                     
-                    # IMSI
-                    imsi_item = QTableWidgetItem(str(imsi) if imsi is not None else '-')
-                    imsi_item.setTextAlignment(Qt.AlignCenter)
-                    imsi_item.setFont(QFont('Courier New', 10))
-                    self.setItem(row_pos, 1, imsi_item)
-                    print(f"[TABLE DEBUG] Set IMSI item: '{imsi_item.text()}'")
+                    # Column 2: IMSI/Data
+                    col2_item = QTableWidgetItem(str(imsi) if imsi is not None else '-')
+                    col2_item.setTextAlignment(Qt.AlignCenter)
+                    self.setItem(row_pos, 1, col2_item)
                     
-                    # ICCID
-                    iccid_item = QTableWidgetItem(str(iccid) if iccid is not None else '-')
-                    iccid_item.setTextAlignment(Qt.AlignCenter)
-                    iccid_item.setFont(QFont('Courier New', 10))
-                    self.setItem(row_pos, 2, iccid_item)
-                    print(f"[TABLE DEBUG] Set ICCID item: '{iccid_item.text()}'")
+                    # Column 3: ICCID/Data
+                    col3_item = QTableWidgetItem(str(iccid) if iccid is not None else '-')
+                    col3_item.setTextAlignment(Qt.AlignCenter)
+                    self.setItem(row_pos, 2, col3_item)
                     
-                    # Carrier
-                    carrier_item = QTableWidgetItem(str(carrier) if carrier is not None else 'Unknown')
-                    carrier_item.setTextAlignment(Qt.AlignCenter)
-                    carrier_item.setFont(QFont('Arial', 11, QFont.Bold))
+                    # Column 4: Carrier/Status
+                    col4_item = QTableWidgetItem(str(carrier) if carrier is not None else 'Unknown')
+                    col4_item.setTextAlignment(Qt.AlignCenter)
+                    self.setItem(row_pos, 3, col4_item)
                     
-                    # ใช้สีตามผู้ให้บริการ
-                    try:
-                        carrier_colors = SimTableWidgetStyles.get_carrier_colors()
-                        if str(carrier) in carrier_colors:
-                            carrier_item.setForeground(QColor(carrier_colors[str(carrier)]))
-                    except Exception as e:
-                        print(f"[TABLE DEBUG] Error setting carrier color: {e}")
+                    # Column 5: Signal/Status
+                    col5_item = QTableWidgetItem(str(signal) if signal is not None else '❌ Error')
+                    col5_item.setTextAlignment(Qt.AlignCenter)
                     
-                    self.setItem(row_pos, 3, carrier_item)
-                    print(f"[TABLE DEBUG] Set carrier item: '{carrier_item.text()}'")
+                    # ตั้งสีตามสถานะ
+                    if "Error" in str(signal):
+                        col5_item.setForeground(QColor("#dc3545"))  # แดง
+                    elif "Unknown" in str(signal):
+                        col5_item.setForeground(QColor("#6c757d"))  # เทา
                     
-                    # Signal - ใช้ item แทน widget ก่อน
-                    signal_text = str(signal) if signal is not None else 'N/A'
-                    
-                    # ตรวจสอบว่ามีไอคอนแล้วหรือไม่
-                    if not signal_text.startswith(('▁▃▅█', '▁▃▅▇', '▁▃▁▁', '▁▁▁▁')):
-                        # ถ้าไม่มีไอคอน ให้เพิ่ม
-                        signal_desc = self.get_signal_description(signal_text)
-                        signal_display = signal_desc
-                    else:
-                        # ถ้ามีบาร์แล้ว ใช้ตามเดิม
-                        signal_display = signal_text
-                    
-                    signal_item = QTableWidgetItem(signal_display)
-                    signal_item.setTextAlignment(Qt.AlignCenter)
-                    
-                    # ตั้งสีตามความแรงสัญญาณ
-                    signal_color = self.get_signal_color(signal_text)
-                    signal_item.setForeground(QColor(signal_color))
-
-                    # ตั้งค่า font monospace เพื่อให้ bars แสดงสวย
-                    monospace_font = QFont("Consolas", 12)  # หรือ "Courier New"
-                    if not monospace_font.exactMatch():
-                        monospace_font = QFont("Courier New", 12)
-                    signal_item.setFont(monospace_font)
-                    
-                    self.setItem(row_pos, 4, signal_item)
-                    print(f"[TABLE DEBUG] Set signal item: '{signal_item.text()}'")
+                    self.setItem(row_pos, 4, col5_item)
                     
                 except Exception as e:
                     print(f"[TABLE DEBUG] Error setting items for row {row_pos}: {e}")
@@ -278,51 +262,6 @@ class SimTableWidget(QTableWidget):
                 
         except (ValueError, AttributeError, KeyError):
             return f'▁▁▁▁ {signal_text}'  # fallback
-
-    def create_signal_widget(self, signal_text):
-        """สร้าง widget แสดงสัญญาณพร้อมไอคอนและข้อความ - ใช้สไตล์ใหม่"""
-        try:
-            container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.setContentsMargins(5, 0, 5, 0)
-            layout.setSpacing(5)
-
-            # สร้าง icon & bars
-            bars = self.get_signal_bars(signal_text)
-            color = self.get_signal_color(signal_text)
-            desc = self.get_signal_description(signal_text)
-
-            bars_label = QLabel(bars)
-            bars_label.setFont(QFont('Courier', 12, QFont.Bold))
-            
-            # ใช้สไตล์ตามระดับสัญญาณ
-            if desc == "Excellent":
-                bars_label.setStyleSheet(SimTableWidgetStyles.get_signal_bars_excellent_style())
-            elif desc == "Good":
-                bars_label.setStyleSheet(SimTableWidgetStyles.get_signal_bars_good_style())
-            elif desc == "Fair":
-                bars_label.setStyleSheet(SimTableWidgetStyles.get_signal_bars_fair_style())
-            elif desc == "Poor":
-                bars_label.setStyleSheet(SimTableWidgetStyles.get_signal_bars_poor_style())
-            else:
-                bars_label.setStyleSheet(SimTableWidgetStyles.get_signal_bars_no_signal_style())
-            
-            text_label = QLabel(f"{desc} ({signal_text})")
-            text_label.setStyleSheet(f"QLabel {{ color: {color}; font-size: 11px; }}")
-
-            layout.addWidget(bars_label)
-            layout.addWidget(text_label)
-            layout.addStretch()
-            
-            # ใช้สไตล์ container
-            container.setStyleSheet(SimTableWidgetStyles.get_signal_container_style())
-            container.setLayout(layout)
-            return container
-        except Exception as e:
-            print(f"[TABLE DEBUG] Error creating signal widget: {e}")
-            # fallback to simple label
-            fallback = QLabel(f"Error ({signal_text})")
-            return fallback
 
     def update_sms_button_enable(self, port_available):
         """อัพเดทสถานะปุ่ม SMS"""

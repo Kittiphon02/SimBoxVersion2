@@ -1,6 +1,6 @@
 {
   "auto_sms_monitor": true,
-  "last_port": "Device not found",
+  "last_port": "COM9",
   "last_baudrate": "115200",
   "log_dir": "//KITTIPHON/SMS_Log"
 }
