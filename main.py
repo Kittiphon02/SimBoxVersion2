@@ -1,4 +1,5 @@
-# main.py
+# main.py - Fixed Integration with SMS History Manager
+
 import sys
 from PyQt5.QtWidgets import QApplication
 
@@ -44,7 +45,7 @@ def main():
         if index >= 0:
             window.port_combo.setCurrentIndex(index)
 
-    # 5) Apply Styles ให้ widget ย่อย
+    # 5) Apply Styles ให้ widget ย่อย (แก้ไข box-shadow)
     combo_qss = MainWindowStyles.get_at_combo_style()
     window.port_combo.setStyleSheet(combo_qss)
     window.baud_combo.setStyleSheet(combo_qss)
@@ -53,7 +54,7 @@ def main():
     window.sms_input.setStyleSheet(MainWindowStyles.get_sms_input_style())
     window.res_display.setStyleSheet(MainWindowStyles.get_result_display_style())
 
-    # Apply button styles
+    # Apply button styles (แก้ไข box-shadow)
     window.btn_send_at.setStyleSheet(MainWindowStyles.get_send_at_button_style())
     window.btn_send_sms.setStyleSheet(MainWindowStyles.get_send_sms_button_style())
     window.btn_refresh.setStyleSheet(MainWindowStyles.get_refresh_button_style())
@@ -70,20 +71,23 @@ def main():
     window.btn_del_sms.setStyleSheet(MainWindowStyles.get_delete_button_style())
     window.btn_delete.setStyleSheet(MainWindowStyles.get_send_at_button_style())
     
-    # Apply help button style if it exists
+    # Apply help button style (แก้ไข box-shadow)
     if hasattr(window, 'btn_help'):
         window.btn_help.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                            stop:0 #17a2b8, stop:1 #138496);
-                color: white; font-weight: 600; border-radius: 4px;
-                padding: 6px 12px; font-size: 12px; border: none;
+                color: white; 
+                font-weight: 600; 
+                border-radius: 4px;
+                padding: 6px 12px; 
+                font-size: 12px; 
+                border: none;
                 min-width: 60px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                            stop:0 #138496, stop:1 #117a8b);
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             }
             QPushButton:pressed {
                 background: #117a8b;
@@ -184,11 +188,72 @@ def main():
     )
     window.btn_send_sms.clicked.connect(sms_srv.send_sms)
 
-    # 10) Additional button connections
-    window.btn_history.clicked.connect(window.show_log_dialog)
-    window.btn_inbox.clicked.connect(window.show_log_dialog)
+    # ==================== 10) SMS HISTORY DIALOG INTEGRATION ====================
+    def show_sms_history_dialog():
+        """แสดง SMS History Dialog ใหม่"""
+        try:
+            # Import SMS Log Dialog
+            from ui.dialogs.sms_log_dialog import SmsLogDialog
+            
+            print("🔗 Opening SMS History Dialog...")
+            
+            # สร้าง dialog
+            dialog = SmsLogDialog(parent=window)
+            
+            # เชื่อมต่อ signal สำหรับส่ง SMS
+            def handle_send_sms_request(phone, message):
+                """จัดการเมื่อมีการขอส่ง SMS จาก dialog"""
+                window.phone_input.setText(phone)
+                window.sms_input.setText(message)
+                window.update_response_display(
+                    f"📱 Auto-filled from history: {phone} - {message[:50]}..."
+                )
+            
+            dialog.send_sms_requested.connect(handle_send_sms_request)
+            
+            # แสดง dialog
+            dialog.exec_()
+            
+            print("✅ SMS History Dialog closed successfully")
+            
+        except ImportError as e:
+            print(f"❌ Import Error: {e}")
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                window, 
+                "Import Error", 
+                f"ไม่สามารถโหลด SMS History Dialog ได้\n\nError: {e}\n\n"
+                f"กรุณาตรวจสอบไฟล์:\n"
+                f"• ui/dialogs/sms_log_dialog.py\n"
+                f"• styles/sms_log_dialog_styles.py"
+            )
+        except Exception as e:
+            print(f"❌ Error opening SMS History Dialog: {e}")
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                window, 
+                "Error", 
+                f"เกิดข้อผิดพลาดในการเปิด SMS History Dialog\n\nError: {e}"
+            )
+
+    # เชื่อมต่อปุ่มประวัติ SMS กับฟังก์ชันใหม่
+    def safe_disconnect_and_connect(button, new_function):
+        """ตัดการเชื่อมต่อเดิมอย่างปลอดภัยและเชื่อมต่อใหม่"""
+        try:
+            button.clicked.disconnect()
+        except TypeError:
+            # ไม่มีการเชื่อมต่อเดิม - ไม่เป็นไร
+            pass
+        button.clicked.connect(new_function)
+
+    # เชื่อมต่อปุ่มทั้งสอง
+    safe_disconnect_and_connect(window.btn_history, show_sms_history_dialog)
+    safe_disconnect_and_connect(window.btn_inbox, show_sms_history_dialog)
     
-    # Delete button functionality - เพิ่มเติมฟังก์ชัน
+    print("🔗 SMS History Dialog integrated successfully!")
+
+    # 11) Additional button connections
+    # Delete button functionality
     def clear_at_input():
         window.clear_at_input()  # ใช้ฟังก์ชันจาก MainWindow
     
@@ -206,7 +271,7 @@ def main():
     # Clear Response ปุ่มใหม่
     window.btn_clear_response.clicked.connect(lambda: window.res_display.clear())
     
-    # Monitor button (placeholder)
+    # Monitor button
     def show_monitor():
         try:
             from ui.sms_realtime_monitor import SmsRealtimeMonitor
@@ -222,25 +287,19 @@ def main():
     
     window.btn_monitor.clicked.connect(show_monitor)
     
-    # Recovery button (placeholder)
+    # Recovery button
     def show_recovery():
         from PyQt5.QtWidgets import QMessageBox
         QMessageBox.information(window, "SIM Recovery", "SIM Recovery feature coming soon!")
     
     window.btn_recover.clicked.connect(show_recovery)
     
-    # Delete SMS button (placeholder)
+    # Delete SMS button
     def delete_sms():
         from PyQt5.QtWidgets import QMessageBox
         QMessageBox.information(window, "Delete SMS", "Delete SMS feature coming soon!")
     
     window.btn_del_sms.clicked.connect(delete_sms)
-    
-    # เพิ่มฟังก์ชัน Enter key สำหรับส่ง AT command
-    def on_cmd_enter():
-        cmd = window.input_cmd()
-        if cmd.strip():
-            at_srv.send(cmd)
     
     # เชื่อมต่อ Enter key กับการส่งคำสั่ง
     window.cmd_input.returnPressed.connect(on_cmd_enter)
@@ -249,7 +308,6 @@ def main():
     def setup_autocomplete():
         try:
             from PyQt5.QtWidgets import QCompleter
-            from PyQt5.QtCore import QStringListModel
             
             # สร้าง completer จากประวัติคำสั่ง
             history_items = [window.cmd_history_combo.itemText(i) 
@@ -268,13 +326,19 @@ def main():
     # เรียกใช้ autocomplete หลังจากโหลดประวัติเสร็จ
     setup_autocomplete()
 
-    # 11) แสดงหน้าต่างและเริ่ม loop
+    # 12) แสดงหน้าต่างและเริ่ม loop
     window.show()
     
     # แสดงข้อความต้อนรับ
     welcome_msg = """
 ═══════════════════════════════════════════════════════════════
 🚀 SIM Management System เริ่มต้นการทำงานแล้ว!
+
+📱 SMS History Manager (เวอร์ชันปรับปรุงใหม่!):
+• ดูประวัติ SMS: คลิก "ดูประวัติ SMS" เพื่อเปิด SMS History Manager
+• จัดการข้อมูล: แยกประเภท SMS เข้า/ส่ง/ล้มเหลว, เรียงลำดับ
+• ส่งออกข้อมูล: Export เป็น Excel/CSV พร้อมกรองข้อมูล
+• ดับเบิลคลิก: คลิกสองครั้งบนแถวเพื่อใช้ข้อมูลส่ง SMS
 
 📋 คุณสมบัติ AT Command History:
 • ประวัติคำสั่ง: ใช้ dropdown "History ▼" เพื่อเลือกคำสั่งที่เคยใช้
@@ -287,6 +351,7 @@ def main():
 2. พิมพ์คำสั่ง AT หรือเลือกจากประวัติ  
 3. กด "Send AT", กด Enter, หรือใช้ปุ่ม "❓ Help"
 4. ดูผลลัพธ์ในช่อง Response
+5. จัดการ SMS ด้วย SMS History Manager
 
 💡 คำสั่งยอดนิยม: AT, AT+CNUM, AT+CSQ, AT+CPIN?, AT+CMGF=1
 
@@ -297,7 +362,7 @@ def main():
     
     exit_code = app.exec_()
 
-    # 12) บันทึก settings ก่อนปิด
+    # 13) บันทึก settings ก่อนปิด
     cfg["last_port"] = window.port_combo.currentData() or window.port_combo.currentText()
     cfg["last_baudrate"] = window.baud_combo.currentText()
     save_settings(cfg)

@@ -1,91 +1,110 @@
 # styles/__init__.py
 
-# Import all style classes
-from .loading_widget_styles import LoadingWidgetStyles
-from .main_window_styles import MainWindowStyles
-from .sim_table_widget_styles import SimTableWidgetStyles
-from .sms_log_dialog_styles import SmsLogDialogStyles
-from .sms_realtime_monitor_styles import SmsRealtimeMonitorStyles
+# Import เฉพาะ modules ที่มีจริง
+try:
+    from .main_window_styles import MainWindowStyles
+    print("✅ MainWindowStyles imported successfully")
+except ImportError as e:
+    print(f"❌ Warning: MainWindowStyles not found - {e}")
+    MainWindowStyles = None
 
-# Create global color scheme and style utilities
+try:
+    from .sim_table_widget_styles import SimTableWidgetStyles  
+    print("✅ SimTableWidgetStyles imported successfully")
+except ImportError as e:
+    print(f"❌ Warning: SimTableWidgetStyles not found - {e}")
+    SimTableWidgetStyles = None
+
+try:
+    from .sms_log_dialog_styles import SmsLogDialogStyles
+    print("✅ SmsLogDialogStyles imported successfully")
+except ImportError as e:
+    print(f"❌ Warning: SmsLogDialogStyles not found - {e}")
+    SmsLogDialogStyles = None
+
+try:
+    from .loading_widget_styles import LoadingWidgetStyles
+    print("✅ LoadingWidgetStyles imported successfully")
+except ImportError as e:
+    print(f"❌ Warning: LoadingWidgetStyles not found - {e}")
+    LoadingWidgetStyles = None
+
+# สร้าง StyleUtils และ GlobalColorScheme แบบ inline เพื่อความเข้ากันได้
 class GlobalColorScheme:
-    """โทนสีทั่วไปสำหรับแอพพลิเคชัน"""
-    PRIMARY = '#dc3545'
-    PRIMARY_LIGHT = '#f8d7da'
-    PRIMARY_DARK = '#c82333'
+    """Global Color Scheme สำหรับ UI"""
+    PRIMARY = "#dc3545"
+    PRIMARY_LIGHT = "#f8d7da" 
+    PRIMARY_DARK = "#c82333"
     
-    SUCCESS = '#198754'
-    SUCCESS_LIGHT = '#d1e7dd'
-    SUCCESS_DARK = '#157347'
+    SUCCESS = "#198754"
+    SUCCESS_LIGHT = "#d1e7dd"
+    SUCCESS_DARK = "#157347"
     
-    INFO = '#0d6efd'
-    INFO_LIGHT = '#cfe2ff'
-    INFO_DARK = '#0b5ed7'
+    INFO = "#0dcaf0"
+    INFO_LIGHT = "#cff4fc"
+    INFO_DARK = "#087990"
     
-    WARNING = '#ffc107'
-    WARNING_LIGHT = '#fff3cd'
-    WARNING_DARK = '#ffca2c'
+    WARNING = "#ffc107"
+    WARNING_LIGHT = "#fff3cd"
+    WARNING_DARK = "#ff8800"
     
-    DANGER = '#dc3545'
-    DANGER_LIGHT = '#f8d7da'
-    DANGER_DARK = '#bb2d3b'
+    DANGER = "#dc3545"
+    DANGER_LIGHT = "#f8d7da"
+    DANGER_DARK = "#b02a37"
+    
+    LIGHT = "#f8f9fa"
+    DARK = "#212529"
+    SECONDARY = "#6c757d"
 
 class StyleUtils:
-    """ยูทิลิตี้สำหรับสร้างสไตล์"""
+    """Utility class สำหรับสร้าง styles"""
     
     @staticmethod
     def create_button_style(bg_color, hover_color, pressed_color):
-        """สร้างสไตล์ปุ่มแบบทั่วไป"""
+        """สร้าง button style แบบ gradient"""
         return f"""
             QPushButton {{
-                background: {bg_color};
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                           stop:0 {bg_color}, stop:1 {StyleUtils.darken_color(bg_color, 0.1)});
                 color: white;
-                font-weight: 600;
-                border-radius: 4px;
-                padding: 6px 12px;
-                font-size: 13px;
                 border: none;
-                min-width: 80px;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
             }}
             QPushButton:hover {{
-                background: {hover_color};
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                           stop:0 {hover_color}, stop:1 {StyleUtils.darken_color(hover_color, 0.1)});
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             }}
             QPushButton:pressed {{
                 background: {pressed_color};
-                padding-top: 7px;
+                padding-top: 9px;
             }}
         """
     
     @staticmethod
-    def create_input_style(border_color, focus_color, bg_color='#fff'):
-        """สร้างสไตล์ input แบบทั่วไป"""
-        return f"""
-            QLineEdit, QTextEdit {{
-                font-size: 14px;
-                border-radius: 4px;
-                border: 1px solid {border_color};
-                padding: 6px 8px;
-                background-color: {bg_color};
-                color: #212529;
-            }}
-            QLineEdit:focus, QTextEdit:focus {{
-                border: 1px solid {focus_color};
-                background-color: #fff5f5;
-                outline: none;
-            }}
-            QLineEdit:hover, QTextEdit:hover {{
-                border: 1px solid {border_color};
-            }}
-        """
+    def darken_color(color, factor=0.1):
+        """ทำให้สีเข้มขึ้น"""
+        color_map = {
+            "#dc3545": "#c82333",
+            "#198754": "#157347",
+            "#0dcaf0": "#087990", 
+            "#ffc107": "#ff8800",
+            "#6c757d": "#545b62"
+        }
+        return color_map.get(color, color)
 
-# Export all classes for easy importing
-__all__ = [
-    'LoadingWidgetStyles',
-    'MainWindowStyles', 
-    'SimTableWidgetStyles',
-    'SmsLogDialogStyles',
-    'SmsRealtimeMonitorStyles',
-    'GlobalColorScheme',
-    'StyleUtils'
-]
+print("🔧 Style modules initialization completed")
+
+# Export ทุกอย่างที่มี
+__all__ = ['StyleUtils', 'GlobalColorScheme']
+if MainWindowStyles:
+    __all__.append('MainWindowStyles')
+if SimTableWidgetStyles:
+    __all__.append('SimTableWidgetStyles')
+if SmsLogDialogStyles:
+    __all__.append('SmsLogDialogStyles')
+if LoadingWidgetStyles:
+    __all__.append('LoadingWidgetStyles')

@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 
 from ui.sim_table_widget import SimTableWidget
-from ui.dialogs.sms_log_dialog import SmsLogDialog
 from styles import (
     MainWindowStyles,
     SmsLogDialogStyles,
@@ -17,6 +16,12 @@ from styles import (
     StyleUtils,
     GlobalColorScheme
 )
+
+def set_button_with_size(button, width):
+    """ตั้งค่าขนาดปุ่มหลังจากตั้งค่า style"""
+    button.setFixedWidth(width)
+    button.setFixedHeight(35)  # กำหนดความสูงเท่ากัน
+    return button
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -46,6 +51,7 @@ class MainWindow(QMainWindow):
 
         self.btn_refresh = QPushButton("Refresh Ports")
         self.btn_refresh.setStyleSheet(MainWindowStyles.get_refresh_button_style())
+        set_button_with_size(self.btn_refresh, 110)
 
         self.btn_history = QPushButton("ดูประวัติ SMS")
         self.btn_history.setStyleSheet(StyleUtils.create_button_style(
@@ -53,6 +59,7 @@ class MainWindow(QMainWindow):
             GlobalColorScheme.INFO_LIGHT,
             GlobalColorScheme.INFO
         ))
+        set_button_with_size(self.btn_history, 120)
 
         self.btn_monitor = QPushButton("SMS Monitor")
         self.btn_monitor.setStyleSheet(StyleUtils.create_button_style(
@@ -60,9 +67,11 @@ class MainWindow(QMainWindow):
             GlobalColorScheme.SUCCESS_LIGHT,
             GlobalColorScheme.SUCCESS
         ))
+        set_button_with_size(self.btn_monitor, 110)
 
         self.btn_recover = QPushButton("SIM Recovery")
         self.btn_recover.setStyleSheet(MainWindowStyles.get_send_at_button_style())
+        set_button_with_size(self.btn_recover, 115)
 
         mg_layout.addWidget(QLabel("USB Port:"))
         mg_layout.addWidget(self.port_combo)
@@ -228,17 +237,21 @@ class MainWindow(QMainWindow):
         self.btn_send_sms = QPushButton("Send SMS")
         self.btn_inbox    = QPushButton("SMS inbox")
         self.btn_del_sms  = QPushButton("Delete SMS")
-        for btn, style in [
-            (self.btn_send_at,  MainWindowStyles.get_send_at_button_style()),
-            (self.btn_send_sms, MainWindowStyles.get_send_sms_button_style()),
+        
+        # Apply styles and set sizes for action buttons
+        button_configs = [
+            (self.btn_send_at,  MainWindowStyles.get_send_at_button_style(), 120),
+            (self.btn_send_sms, MainWindowStyles.get_send_sms_button_style(), 120),
             (self.btn_inbox,    StyleUtils.create_button_style(
                                    GlobalColorScheme.INFO,
                                    GlobalColorScheme.INFO_LIGHT,
-                                   GlobalColorScheme.INFO)),
-            (self.btn_del_sms,  MainWindowStyles.get_delete_button_style())
-        ]:
+                                   GlobalColorScheme.INFO), 120),
+            (self.btn_del_sms,  MainWindowStyles.get_delete_button_style(), 120)
+        ]
+        
+        for btn, style, width in button_configs:
             btn.setStyleSheet(style)
-            btn.setFixedHeight(35)
+            set_button_with_size(btn, width)
 
         # row2: SMS + Telephone + Actions + AT Log  |  Response
         row2 = QHBoxLayout()
@@ -271,9 +284,6 @@ class MainWindow(QMainWindow):
         btn_box = QHBoxLayout()
         btn_box.setContentsMargins(0, 0, 0, 0)
         btn_box.setSpacing(20)
-        # ขยายความกว้างปุ่มทั้งหมด
-        for btn in (self.btn_send_at, self.btn_send_sms, self.btn_inbox, self.btn_del_sms):
-            btn.setFixedWidth(120)
         # จัดกึ่งกลาง: เติม stretch ก่อนและหลัง
         btn_box.addStretch(1)
         btn_box.addWidget(self.btn_send_at)
@@ -363,17 +373,17 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(title)
         main_layout.addWidget(modem_group)
 
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"color: {GlobalColorScheme.PRIMARY};")
-        main_layout.addWidget(sep)
+        # เพิ่มระยะห่าง
+        main_layout.addSpacing(20)
+        main_layout.addLayout(ag_layout)
 
         main_layout.addWidget(at_group)
         main_layout.addWidget(self.sim_table_widget)
         self.setCentralWidget(central)
 
         # connect signals
-        self.btn_history.clicked.connect(self.show_log_dialog)
+        self.btn_history.clicked.connect(self.show_sms_history_dialog)
+        self.btn_inbox.clicked.connect(self.show_sms_history_dialog)
         self.btn_hide.clicked.connect(self.toggle_response_display)
         self.btn_help.clicked.connect(self.show_at_command_helper)
         
@@ -390,11 +400,63 @@ class MainWindow(QMainWindow):
             self.btn_hide.setText("Hide")
 
     def show_log_dialog(self, log_file=None):
-        """แสดง SMS log dialog"""
-        path = log_file or "log/sms_inbox_log.csv"
-        dlg = SmsLogDialog(path)
-        dlg.setStyleSheet(SmsLogDialogStyles.get_dialog_style())
-        dlg.exec_()
+        """แสดง SMS log dialog แบบเก่า (fallback)"""
+        try:
+            from ui.dialogs.sms_log_dialog import SmsLogDialog
+            path = log_file or "log/sms_inbox_log.csv"
+            dlg = SmsLogDialog(path)
+            dlg.setStyleSheet(SmsLogDialogStyles.get_dialog_style())
+            dlg.exec_()
+        except Exception as e:
+            print(f"Error opening old SMS log dialog: {e}")
+
+    def show_sms_history_dialog(self):
+        """แสดง SMS History Dialog ใหม่ - ใช้ใน ui_builder"""
+        try:
+            from ui.dialogs.sms_log_dialog import SmsLogDialog
+            
+            print("🔗 Opening SMS History Dialog from UI Builder...")
+            
+            # สร้าง dialog
+            dialog = SmsLogDialog(parent=self)
+            
+            # เชื่อมต่อ signal สำหรับส่ง SMS
+            def handle_send_sms_request(phone, message):
+                """จัดการเมื่อมีการขอส่ง SMS จาก dialog"""
+                self.phone_input.setText(phone)
+                self.sms_input.setText(message)
+                self.update_response_display(
+                    f"📱 Auto-filled from SMS History: {phone} - {message[:50]}..."
+                )
+            
+            dialog.send_sms_requested.connect(handle_send_sms_request)
+            
+            # แสดง dialog
+            result = dialog.exec_()
+            
+            print(f"✅ SMS History Dialog closed with result: {result}")
+            
+        except ImportError as e:
+            print(f"❌ Import Error in UI Builder: {e}")
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                self, 
+                "Import Error", 
+                f"ไม่สามารถโหลด SMS History Dialog ได้\n\nError: {e}\n\n"
+                f"กรุณาตรวจสอบไฟล์:\n"
+                f"• ui/dialogs/sms_log_dialog.py\n"
+                f"• styles/sms_log_dialog_styles.py"
+            )
+        except Exception as e:
+            print(f"❌ Error in UI Builder SMS History Dialog: {e}")
+            import traceback
+            traceback.print_exc()
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                self, 
+                "Error", 
+                f"เกิดข้อผิดพลาดในการเปิด SMS History Dialog\n\nError: {e}"
+            )
 
     def show_at_command_helper(self):
         """แสดงหน้าต่าง AT Command Helper"""
