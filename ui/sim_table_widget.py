@@ -14,7 +14,7 @@ class SimTableWidget(QTableWidget):
     def __init__(self, sims, history_callback=None, port_available=True):
         super().__init__(0, 5)
         # ใช้ header ตัวเลขแบบง่ายตามรูปที่ 2
-        self.setHorizontalHeaderLabels(["1", "2", "3", "4", "5"])
+        self.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile Network", "Signal"])
         self.history_callback = history_callback
         self.port_available = port_available
         
@@ -69,7 +69,10 @@ class SimTableWidget(QTableWidget):
     def set_data_with_debug(self, sims):
         """ตั้งค่าข้อมูลในตารางพร้อม debug"""
         print(f"[TABLE DEBUG] set_data_with_debug called with {len(sims) if sims else 0} SIMs")
-        
+       
+        # ตั้งค่า header labels อีกครั้ง
+        self.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile Network", "Signal"])
+    
         try:
             self.setRowCount(0)  # ลบแค่แถวข้อมูล
             self.clearContents()  # ลบเฉพาะเนื้อหา ไม่ลบ headers

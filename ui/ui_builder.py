@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
         # ── 3) SIM Table ─────────────────────────────────────────
         self.sim_table_widget = SimTableWidget([])
         self.sim_table_widget.setStyleSheet(SimTableWidgetStyles.get_table_style())
-        self.sim_table_widget.setHorizontalHeaderLabels(["1","2","3","4","5"])
+        self.sim_table_widget.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile Network", "Signal"])
 
         # ── Main layout ─────────────────────────────────────────
         central = QWidget()

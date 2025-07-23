@@ -3,13 +3,13 @@ import sys
 from PyQt5.QtWidgets import QApplication
 
 from services.settings_service import load_settings, save_settings
-from services.serial_service    import list_serial_ports, SerialMonitorThread, reload_sim
-from services.at_service        import ATService
-from services.sms_service       import SMSService
-from services.sms_log           import log_sms_inbox, log_sms_sent
+from services.serial_service import list_serial_ports, SerialMonitorThread, reload_sim
+from services.at_service import ATService
+from services.sms_service import SMSService
+from services.sms_log import log_sms_inbox, log_sms_sent
+from ui.ui_builder import build_main_window
+from styles import MainWindowStyles, StyleUtils, GlobalColorScheme
 
-from ui.ui_builder              import build_main_window
-from styles                     import MainWindowStyles, StyleUtils, GlobalColorScheme
 
 def main():
     # 1) เริ่ม QApplication และโหลด settings
@@ -31,12 +31,18 @@ def main():
     window.baud_combo.setCurrentText(cfg.get("last_baudrate", "115200"))
 
     ports = list_serial_ports()
-    devs = [p for p,_ in ports]
+    devs = [p for p,_ in ports]  # สร้างตัวแปร devs
+    # แสดง description ใน combo แต่เก็บค่า device เป็น data
     window.port_combo.clear()
-    window.port_combo.addItems(devs)
+    for device, description in ports:
+        window.port_combo.addItem(description, device)  # แสดง description, เก็บ device
+
     last_port = cfg.get("last_port")
     if last_port in devs:
-        window.port_combo.setCurrentText(last_port)
+        # หา index ของ device และตั้งค่า
+        index = window.port_combo.findData(last_port)
+        if index >= 0:
+            window.port_combo.setCurrentIndex(index)
 
     # 5) Apply Styles ให้ widget ย่อย
     combo_qss = MainWindowStyles.get_at_combo_style()
@@ -91,13 +97,17 @@ def main():
     from styles.sim_table_widget_styles import SimTableWidgetStyles
     window.sim_table_widget.setStyleSheet(SimTableWidgetStyles.create_unified_table_style())
     window.sim_table_widget.horizontalHeader().setStyleSheet(SimTableWidgetStyles.get_table_header_style())
+    # ตั้งค่า header labels อีกครั้งหลังจาก apply styles
+    window.sim_table_widget.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile Network", "Signal"])
 
     # 6) ฟังก์ชันอัปเดต SIM Table
     def update_sim():
-        port = window.port_combo.currentText()
+        port = window.port_combo.currentData() or window.port_combo.currentText()
         baud = int(window.baud_combo.currentText()) if window.baud_combo.currentText() else 115200
         sims = reload_sim(port, baud)
         window.sim_table_widget.set_data_with_debug(sims)
+        # ตั้งค่า header labels อีกครั้ง
+        window.sim_table_widget.setHorizontalHeaderLabels(["Telephone", "IMSI", "ICCID", "Mobile Network", "Signal"])
 
     # Connect port/baud change events
     window.port_combo.currentIndexChanged.connect(update_sim)
@@ -106,16 +116,19 @@ def main():
     
     def refresh_ports_and_update():
         """รีเฟรช port และอัพเดท SIM"""
-        current_port = window.port_combo.currentText()
+        current_port = window.port_combo.currentData()  # ใช้ currentData แทน currentText
         ports = list_serial_ports()
-        devs = [p for p,_ in ports]
         
         window.port_combo.clear()
-        window.port_combo.addItems(devs)
+        for device, description in ports:
+            window.port_combo.addItem(description, device)
         
         # คืนค่า port เดิมถ้ายังมี
-        if current_port in devs:
-            window.port_combo.setCurrentText(current_port)
+        current_devices = [device for device, _ in ports]
+        if current_port in current_devices:
+            index = window.port_combo.findData(current_port)
+            if index >= 0:
+                window.port_combo.setCurrentIndex(index)
         
         update_sim()
     
@@ -285,7 +298,7 @@ def main():
     exit_code = app.exec_()
 
     # 12) บันทึก settings ก่อนปิด
-    cfg["last_port"] = window.port_combo.currentText()
+    cfg["last_port"] = window.port_combo.currentData() or window.port_combo.currentText()
     cfg["last_baudrate"] = window.baud_combo.currentText()
     save_settings(cfg)
 
